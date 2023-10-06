@@ -5,11 +5,9 @@ import requests
 from PyPDF2 import PdfReader
 import openai
 import json
-from dotenv import load_dotenv
 
 app = Flask(__name__)
 
-load_dotenv()
 # OpenAI API key (replace 'your-api-key' with your actual API key)
 openai.api_key = os.environ.get('OPENAI_API_KEY')
 
