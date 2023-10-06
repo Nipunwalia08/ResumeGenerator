@@ -9,7 +9,7 @@ import json
 app = Flask(__name__)
 
 # OpenAI API key (replace 'your-api-key' with your actual API key)
-openai.api_key = os.environ.get('OPENAI_API_KEY')
+openai.api_key = os.getenv('OPENAI_API_KEY')
 
 def extract_text_from_pdf(pdf_content):
     extracted_text = ""
