@@ -1,8 +1,10 @@
 from flask import Flask, request, jsonify
 import os
+import io
 import requests
 from PyPDF2 import PdfReader
 import openai
+import json
 from dotenv import load_dotenv
 
 app = Flask(__name__)
@@ -11,23 +13,12 @@ load_dotenv()
 # OpenAI API key (replace 'your-api-key' with your actual API key)
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
-# Create a folder named 'user_resume' if it doesn't exist
-if not os.path.exists('user_resume'):
-    os.makedirs('user_resume')
-
-def download_pdf(pdf_url):
-    response = requests.get(pdf_url, stream=True)
-    with open("user_resume/temp.pdf", "wb") as pdf_file:
-        for chunk in response.iter_content(chunk_size=128):
-            pdf_file.write(chunk)
-
-def extract_text_from_pdf(pdf_path):
+def extract_text_from_pdf(pdf_content):
     extracted_text = ""
-    with open(pdf_path, "rb") as pdf_file:
-        pdf_reader = PdfReader(pdf_file)
-        for page_num in range(len(pdf_reader.pages)):
-            page = pdf_reader.pages[page_num]
-            extracted_text += page.extract_text()
+    pdf_reader = PdfReader(io.BytesIO(pdf_content))
+    for page_num in range(len(pdf_reader.pages)):
+        page = pdf_reader.pages[page_num]
+        extracted_text += page.extract_text()
     return extracted_text
 
 @app.route('/extract-text', methods=['POST'])
@@ -38,14 +29,43 @@ def extract_text():
         return jsonify({'error': 'PDF URL is missing'}), 400
 
     try:
-        download_pdf(pdf_url)
-        pdf_path = os.path.join('user_resume', 'temp.pdf')
-        extracted_text = extract_text_from_pdf(pdf_path)
-        os.remove(pdf_path)  # Remove the temporary PDF file after extraction
-        return jsonify({'extracted_text': extracted_text}), 200
+        response = requests.get(pdf_url)
+        response.raise_for_status()  # Raise an exception for 4xx and 5xx status codes
+        extracted_text = extract_text_from_pdf(response.content)
+        
+        # Construct prompt with extracted resume text and job description
+        prompt = [
+            {"role": "system", "content": "You are a AI resume extractor."},
+            {"role": "user", "content":f"""
+                    Consider following raw resume text extracted from user resume PDF delimited between ### ###:
+                    ###{extracted_text}###
+                    --------------------------------------------------------------
+                    Generate a valid JSON response with above extracted resume text. 
+                    Note:
+                    -Generate JSON making keys section name and values text extracted from resume.
+                    -Make single line JSON response. 
+                    -Respond only with the generated JSON response.
+                    """}
+        ]
+        # -If PDF does not seem to be a resume, return an error message.               
+        
+        response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=prompt,
+        max_tokens=1000,  # Limit the response to a certain number of tokens
+        )
+        
+        response = response["choices"][0]["message"]["content"]
+        
+        return jsonify({'extracted_text': json.loads(response)}), 200
+        # return jsonify({'extracted_text': extracted_text}), 200
+    
+    except requests.exceptions.HTTPError as errh:
+        return jsonify({'error': f'HTTP Error: {errh}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
+    
+    
 @app.route('/generate-resume', methods=['POST'])
 def generate_resume():
     data = request.get_json()
@@ -60,8 +80,8 @@ def generate_resume():
         prompt = [
             {"role": "system", "content": "You are a AI Resume Generator."},
             {"role": "user", "content":f"""
-                    consider following resume text and job description:
-                    ```Resume Text:\n{extracted_resume_text}
+                    consider following resume and job description:
+                    ```Resume :\n{extracted_resume_text}
                     Job Description:\n{job_description}```
                     Generate a new resume with the following sections for the mentioned job description:
                     Professional Summary, Education, Projects, Experience, Skills and Interests, Achievements (if any)
@@ -74,7 +94,7 @@ def generate_resume():
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=prompt,
-            max_tokens=1000  # Limit the response to a certain number of tokens
+            max_tokens=2000  # Limit the response to a certain number of tokens
         )
         
         # Get the generated resume text from OpenAI response
