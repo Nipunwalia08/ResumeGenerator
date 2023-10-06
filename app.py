@@ -45,9 +45,9 @@ def extract_text():
                     -Generate JSON making keys section name and values text extracted from resume.
                     -Make single line JSON response. 
                     -Respond only with the generated JSON response.
+                    -If PDF does not seem to be a resume, return an error message.               
                     """}
         ]
-        # -If PDF does not seem to be a resume, return an error message.               
         
         response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
