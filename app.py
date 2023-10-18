@@ -43,6 +43,7 @@ def extract_text():
                     -Generate JSON making keys section name and values text extracted from resume.
                     -Make single line JSON response. 
                     -Respond only with the generated JSON response.
+                    -don't make or add new lines keep the text as in the resume
                     -If PDF does not seem to be a resume, return an error message.               
                     """}
         ]
@@ -83,7 +84,7 @@ def generate_resume():
                     Job Description:\n{job_description}```
                     Generate a new resume with the following sections for the mentioned job description:
                     Professional Summary, Education, Projects, Experience, Skills and Interests, Achievements (if any)
-                    Respond in Markdown format.
+                    Respond in json format with the extact key value as the section provided to you.
                     Respond only with the generated resume text.
                     """
                     }
