@@ -8,7 +8,7 @@ import json
 from dotenv import load_dotenv
 from flask_cors import CORS
 
-load_dotenv()
+# load_dotenv()
 
 app = Flask(__name__)
 
@@ -60,7 +60,7 @@ def extract_text():
         )
         
         response = response["choices"][0]["message"]["content"]
-        print(response)
+        # print(jsonify({'extracted_text': json.dumps(response)}), 200)
         return jsonify({'extracted_text': json.dumps(response)}), 200
         # return jsonify({'extracted_text': extracted_text}), 200
     
