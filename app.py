@@ -5,9 +5,15 @@ import requests
 from PyPDF2 import PdfReader
 import openai
 import json
+from dotenv import load_dotenv
+from flask_cors import CORS
+
+# load_dotenv()
 
 app = Flask(__name__)
 
+CORS(app)
+    
 # OpenAI API key (replace 'your-api-key' with your actual API key)
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
@@ -55,8 +61,8 @@ def extract_text():
         )
         
         response = response["choices"][0]["message"]["content"]
-        
-        return jsonify({'extracted_text': json.loads(response)}), 200
+        # print(jsonify({'extracted_text': json.dumps(response)}), 200)
+        return jsonify({'extracted_text': json.dumps(response)}), 200
         # return jsonify({'extracted_text': extracted_text}), 200
     
     except requests.exceptions.HTTPError as errh:
